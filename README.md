@@ -1,5 +1,9 @@
 # SDSL
 
+> [!IMPORTANT]
+> This project is still in development. Everything written in this document
+> serves as a desired goal rather than an existing feature.
+
 Example:
 
 ```typ
