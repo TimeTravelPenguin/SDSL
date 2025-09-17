@@ -61,3 +61,13 @@ When developing a DSL, you basically define an evaluator for each kind of term (
 `Add`, `Ref`, etc.) and register it into a collection of these evaluators.
 
 Each evaluator takes a known input type, does something to it, and then returns an output.
+In SDSL, these inputs and outputs are called `nodes`, and they are basically just a
+dictionary with a specific schema. For example, `Add(x, y)` takes a pair of inputs (or
+perhaps more) and returns a node with the key-value pairs `(kind: "Add", args: (x, y))`,
+amongst other keys. The evaluator for `Add` would then take the `args` (and perhaps other
+field data), evaluate those args, transform the result of that evaluation, and return a
+new node result.
+
+While this package is flexible, you are free to implement your evaluators to operate
+however you feel most comfortable. However, it would be best to keep things _pure_, and
+always work with structured data (like nodes).
