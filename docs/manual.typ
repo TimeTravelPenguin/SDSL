@@ -11,16 +11,31 @@
   radius: 5pt,
 )
 
-#let docs = tidy.parse-module(
+#let dsl-module = tidy.parse-module(
   read("/src/dsl.typ"),
-  name: "DSL Module",
   old-syntax: false,
 )
 
+#let schema-module = tidy.parse-module(
+  read("/src/schemas.typ"),
+  old-syntax: false,
+)
+
+= DSL Module
+
 #show-module(
-  docs,
+  dsl-module,
   sort-functions: false,
   // omit-private-definitions: true,
+)
+
+#pagebreak()
+
+= Schema Module
+
+#show-module(
+  schema-module,
+  sort-functions: false,
 )
 
 
