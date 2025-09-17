@@ -11,19 +11,148 @@
 
 // ====== Node Schema & Construction ======
 
-/// Default schema fields for all nodes.
-///
-/// It has the following definition:
-///  ```typc
-///  import "@preview/valkyrie:0.2.2" as z
-///
-///  let default-node-fields = (
-///     inline: z.boolean(default: false, optional: true),
-///  )
-///  ```
+/// Node keyword name configuration schema.
+/// Allows renaming of standard node fields.
 /// -> dictionary
-#let default-node-fields = (inline: z.boolean(default: false, optional: true))
+#let _node-kw-schema = z.dictionary((
+  kw-kind: z.string(optional: true, default: "kind"),
+  kw-args: z.string(optional: true, default: "args"),
+  kw-kwargs: z.string(optional: true, default: "kwargs"),
+  kw-children: z.string(optional: true, default: "children"),
+))
 
+#let new-kwargs-schema(..kwargs, schema-opts: (:)) = {
+  let kwargs = kwargs.named()
+
+  if kwargs == (:) {
+    return z.array(
+      z.tuple(z.string(), z.any()),
+      optional: true,
+      default: (:),
+      pre-transform: (_, it) => {
+        assert.eq(type(it), dictionary, message: strfmt(
+          "`kwargs` should be a dictionary. Got: '{}'.",
+          type(it),
+        ))
+
+        it.pairs()
+      },
+      post-transform: (_, it) => it.fold((:), (acc, (k, v)) => acc + ((k): v)),
+      ..schema-opts,
+    )
+  }
+
+  z.dictionary(
+    kwargs,
+    ..schema-opts,
+  )
+}
+
+#let vals = (1, "two", (3, 4), (five: 5, six: "six"))
+#let (x, y, (a, b), xx) = vals
+#let (five,) = xx
+
+#let dftl-kwargs = new-kwargs-schema(
+  foo: z.integer(default: 0, optional: true),
+  bar: z.string(default: "default", optional: true),
+  schema-opts: (optional: true),
+)
+#let test-kwargs = z.parse((foo: 1, bar: "two"), dftl-kwargs)
+#let test-kwargs = z.parse((:), dftl-kwargs)
+
+/// Node value defaults configuration schema.
+/// Allows changing the default values for standard node fields.
+/// -> dictionary
+#let _node-defaults-schema = z.dictionary((
+  default-args: z.array(z.any(), optional: true, default: ()),
+  default-kwargs: z.array(
+    z.tuple(z.string(), z.any()),
+    pre-transform: (_, it) => {
+      assert.eq(type(it), dictionary, message: strfmt(
+        "`default-kwargs` should be a dictionary. Got: '{}'.",
+        type(it),
+      ))
+
+      it.pairs()
+    },
+    post-transform: (_, it) => it.fold((:), (acc, (k, v)) => acc + ((k): v)),
+    optional: true,
+    default: (:),
+  ),
+  default-children: z.array(optional: true, default: ()),
+))
+
+// #let dftls = z.parse(
+//   (
+//     default-args: (),
+//     default-kwargs: (foo: 1),
+//     default-children: (),
+//   ),
+//   _node-defaults-schema,
+// )
+
+/// Create a configuration for renaming standard node fields.
+/// -> dictionary
+#let node-kw-cfg(
+  /// The new name for the 'kind' field. -> str
+  rename-kind: none,
+  /// The new name for the 'args' field. -> str
+  rename-args: none,
+  /// The new name for the 'kwargs' field. -> str
+  rename-kwargs: none,
+  /// The new name for the 'children' field. -> str
+  rename-children: none,
+) = z.parse(
+  (
+    kw-kind: rename-kind,
+    kw-args: rename-args,
+    kw-kwargs: rename-kwargs,
+    kw-children: rename-children,
+  ),
+  _node-kw-schema,
+)
+
+/// Create a configuration defining the default values of standard node fields.
+/// -> dictionary
+#let node-defaults-cfg(
+  /// The default value for the 'args' field. -> array
+  default-args: none,
+  /// The default value for the 'kwargs' field. -> dictionary
+  default-kwargs: none,
+  /// The default value for the 'children' field. -> array
+  default-children: none,
+) = z.parse(
+  (
+    default-args: default-args,
+    default-kwargs: default-kwargs,
+    default-children: default-children,
+  ),
+  _node-defaults-schema,
+)
+
+// #let _kind-schema = z.dictionary((
+
+
+#let _dsl-schema = z.dictionary((
+  options: z.dictionary((
+    node-kw-cfg: _node-kw-schema,
+    node-defaults: _node-defaults-schema,
+  )),
+  // kinds
+))
+
+
+#let new-dsl(node-kw-cfg: none, node-defaults-cfg: none) = z.parse(
+  (
+    options: (
+      node-kw-cfg: node-kw-cfg,
+      node-defaults: node-defaults-cfg,
+    ),
+  ),
+  _dsl-schema,
+)
+
+#let x = new-dsl()
 
 /// Schema for nodes. Nodes encapsulate all data for a given AST item.
 ///
@@ -39,14 +168,13 @@
 ///     + default-node-fields,
 /// )
 /// ```
-/// See @default-node-fields for additional fields.
 /// -> dictionary
 #let node-schema = z.dictionary(
   (
     nodetype: z.string(optional: false),
     data: z.any(optional: false),
-  )
-    + default-node-fields,
+  ),
+  // + default-node-fields,
 )
 
 
@@ -161,7 +289,7 @@
 #let _line-ctor(
   /// The content of the line. -> any
   data,
-  /// Additional fields for the node. Refer to @default-node-fields. -> arguments
+  /// Additional fields for the node. -> arguments
   ..fields,
 ) = mk-node("Line", data, inline: false, ..fields)
 
@@ -177,33 +305,6 @@
 
 /// Schema for Line nodes. -> dictionary
 #let _line-schema = mk-schema-set("Line", _line-ctor, _line-render)
-
-// TODO: Remaining items
-// Control flow:
-//   If
-//   ElseIf
-//   Else
-//   While
-//   For
-//   IfElseChain
-// Commands:
-//   Function
-//   Procedure
-//   Assign
-//   Return
-//   Terminate
-//   Break
-//   Call
-//   Fn
-//   CallInline
-//   FnInline
-// NEW:
-// 	 Continue
-// 	 Yield
-// Commnts:
-//   Comment
-//   CommentInline
-//   LineComment
 
 // ====== DSL Type Registration ======
 
@@ -252,7 +353,6 @@
   /// The content of the line. -> any
   val,
   /// Additional fields for the node.
-  /// Refer to @default-node-fields.
   /// -> arguments
   ..args,
 ) = ctor("Line")(val, ..args)
