@@ -5,42 +5,51 @@
 // Evaluators
 
 #let _eval-add(node, env, ctx) = {
-  let eval_args = ctx.eval_args
-  let ((xv, yv), env) = eval_args(node, env)
+  let eval-args = ctx.eval-args
+  let eval = ctx.eval
+  let (result: (xv, yv), env: env) = eval-args(node, env)
+  let (result: xv, env: env) = eval(xv, env, ctx: ctx)
+  let (result: yv, env: env) = eval(yv, env, ctx: ctx)
 
-  (result: xv + yv, env: env)
+  let sum = (xv, yv).flatten().map(x => if x == none { 0 } else { x }).sum()
+  (result: sum, env: env)
 }
 
 #let _eval-let(node, env, ctx) = {
-  let eval_args = ctx.eval
-  let (var, val) = node.args
-  let ((val,), env) = eval_args(val, env)
+  let eval-args = ctx.eval-args
+  let (result: (var, val), env: env) = eval-args(node, env)
 
-  env.store.insert(var, val)
-  (result: val, env: env)
+  env.vars.insert(var, val)
+  (env: env)
 }
 
 #let _eval-increment(node, env, ctx) = {
-  let eval_args = ctx.eval_args
-  let ((var,), env) = eval_args(node, env)
+  let eval-args = ctx.eval-args
+  let (result: (var,), env: env) = eval-args(node, env)
 
-  let val = env.store.at(var)
+  let val = env.vars.at(var)
   val = val + 1
 
-  env.store.insert(var, val)
-  (result: val, env: env)
+  env.vars.insert(var, val)
+  (env: env)
 }
 
 #let _eval-ref(node, env, ctx) = {
-  let eval_args = ctx.eval_args
-  let ((var,), env) = eval_args(node, env)
+  let eval-args = ctx.eval-args
+  let (result: (var,), env: env) = eval-args(node, env)
 
-  let val = env.store.at(var)
+  let val = env.vars.at(var)
+  (env: env)
+}
+
+#let _eval-return(node, env, ctx) = {
+  let eval-args = ctx.eval-args
+  let (result: (val,), env: env) = eval-args(node, env)
+
   (result: val, env: env)
 }
 
 // Register
-
 #let dsl = register(dsl, "Let", _eval-let)
 #let dsl = register(dsl, "Increment", _eval-increment)
 #let dsl = register(dsl, "Ref", _eval-ref)
@@ -62,4 +71,5 @@
   Add(Ref("x"), Add(2, 3))
 }
 
-#let result = run(ops) // -> 11
+#let result = run(ops).filter(x => x != none) // -> 11
+#assert.eq(result, 11, message: "Expected result to be 11")

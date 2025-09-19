@@ -1,22 +1,16 @@
 [package]
-name = "SDSL"
+name = "simple-dsl"
 version = "0.1.0"
 entrypoint = "src/lib.typ"
 authors = ["TimeTravelPenguin <TimeTravelPenguin@gmail.com>"]
 license = "MIT"
-description = "Create simple domain-specific languages in Typst."
+description = "Create simple domain-specific languages (DSLs) in Typst."
 repository = "https://github.com/TimeTravelPenguin/SDSL"
-keywords = ["dsl", "scripting"]
-categories = ["components"]
-# disciplines = ["computer-science", "mathematics"]
+keywords = ["dsl", "scripting", "language", "domain", "parser", "evaluation"]
+categories = ["utility", "scripting"]
+disciplines = ["computer-science"]
 compiler = "0.13.0"
-exclude = [
-  "docs/",
-  "tests/",
-  ".gitignore",
-  ".git",
-]
+exclude = ["docs/", "tests/", ".gitignore", ".git"]
 
 [tool.tytanic]
 default.ppi = 300
-

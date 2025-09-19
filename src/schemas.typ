@@ -72,14 +72,39 @@
   ),
 ))
 
-/// Kind schema.
-/// Defines a specific kind of node within the DSL.
-/// Each kind has a unique name, a constructor function, and an evaluation function.
+/// Handler schema.
+/// Handlers define how specific node kinds are constructed and evaluated.
+/// Each handler must specify a constructor and an evaluator function.
 /// -> dictionary
-#let kind-schema = z.dictionary((
+#let handler-schema = z.dictionary((
   kind: z.string(optional: false, min: 1),
+  // (args: array, kwargs: dictionary, children: array) -> node
   ctor: z.function(optional: false),
+  // (node, env: Env, ctx: Ctx) -> (result, env: Env)
   eval: z.function(optional: false),
+))
+
+/// Environment schema.
+/// The environment holds variable bindings and other contextual information that
+/// can be accessed and modified during node evaluation.
+/// -> dictionary
+#let env-schema = z.dictionary((
+  vars: z-dictionary-of(z.any(), optional: true, default: (:)),
+))
+
+/// Context schema.
+/// The context provides additional read-only information and utilities that can be used
+/// during node evaluation, such as access to handlers and evaluation functions.
+/// -> dictionary
+#let ctx-schema = z.dictionary((
+  handlers: z-dictionary-of(handler-schema, optional: true, default: (:)),
+  eval: z.function(optional: false),
+  eval-args: z.function(optional: false),
+  eval-children: z.function(optional: false),
+  options: z.dictionary((
+    node-kw-cfg: node-kw-schema,
+    node-defaults: node-defaults-schema,
+  )),
 ))
 
 /// DSL configuration schema.
@@ -92,9 +117,18 @@
     node-kw-cfg: node-kw-schema,
     node-defaults: node-defaults-schema,
   )),
-  kinds: z-dictionary-of(
-    kind-schema,
+  handlers: z-dictionary-of(
+    handler-schema,
     optional: true,
     default: (:),
   ),
+))
+
+/// Result schema for running a DSL evaluation.
+/// This schema captures the result of evaluating a DSL expression,
+/// along with the final environment state.
+/// -> dictionary
+#let run-result-schema = z.dictionary((
+  result: z.any(optional: true, default: none),
+  env: env-schema,
 ))
